@@ -5,7 +5,7 @@
 # See /LICENSE for more information.
 #
 
-ifeq ($(BUILD_OPENWRT), 1) 
+ifdef OPENWRTVERSION
 
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
