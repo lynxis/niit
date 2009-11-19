@@ -403,6 +403,8 @@ static void niit_dev_setup(struct net_device *dev) {
     dev->mtu = ETH_DATA_LEN - sizeof(struct ipv6hdr);
     dev->flags = IFF_NOARP;
     dev->iflink = 1;
+    
+    random_ether_addr(dev->dev_addr);
 
 }
 
@@ -441,10 +443,10 @@ static int __init niit_init(void) {
 
     return 0;
 
-    err_reg_dev:
+err_reg_dev:
     dev_put(tunnel_dev);
     free_netdev(tunnel_dev);
-    err_alloc_dev:
+err_alloc_dev:
     return err;
 
 }
