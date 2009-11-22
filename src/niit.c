@@ -59,10 +59,14 @@
 #define static
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31)
-#define niit_skb_dst skb->dst
-#else
-#define niit_skb_dst skb->_skb_dst
+static inline void skb_dst_drop(struct sk_buff *skb) {
+       dst_release(skb->dst);
+       skb->dst = NULL;
+}
+
 #endif
+
+
 
 struct net_device* tunnel_dev;
 
@@ -96,11 +100,6 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
     struct in6_addr s6addr;
     struct in6_addr d6addr;
 
-    if (tunnel->recursion++) {
-        stats->collisions++;
-        PDEBUG("niit recursion detected beforce skb->protocol switch \n");
-        goto tx_error;
-    }
 
     /*
      * all IPv4 (includes icmp) will be encapsulated.
@@ -134,7 +133,7 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
         }
 
         tdev = rt6->u.dst.dev;
-
+	dst_release(&rt6->u.dst);
         if (tdev == dev) {
             PDEBUG("niit recursion detected todev = dev \n");
             stats->collisions++;
@@ -207,8 +206,7 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
         skb->protocol = htons(ETH_P_IPV6);
         skb->pkt_type = PACKET_HOST;
         skb->dev = tunnel_dev;
-        dst_release((struct dst_entry *)niit_skb_dst);
-        niit_skb_dst = 0;
+	skb_dst_drop(skb);
 
         /* install v6 header */
         memset(iph6, 0, sizeof(struct ipv6hdr));
@@ -344,8 +342,7 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
         skb->protocol = htons(ETH_P_IP);
         skb->pkt_type = PACKET_HOST;
         skb->dev = tunnel_dev;
-        dst_release((struct dst_entry *)niit_skb_dst);
-        niit_skb_dst = 0;
+	skb_dst_drop(skb);
 
         /* TODO: set iph4->ttl = hoplimit and recalc the checksum ! */
 
