@@ -59,17 +59,11 @@
 #define static
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31)
-<<<<<<< HEAD:src/niit.c
-#define niit_skb_dst skb->dst
-#else
-#define niit_skb_dst skb->_skb_dst
-=======
 static inline void skb_dst_drop(struct sk_buff *skb) {
        dst_release(skb->dst);
        skb->dst = NULL;
 }
 
->>>>>>> 5c4500e3efd636d2c770cf482b1c71c77dffeadb:src/niit.c
 #endif
 
 
