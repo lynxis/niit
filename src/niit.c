@@ -59,11 +59,9 @@
 #define static
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31)
-
-static inline struct dst_entry *skb_dst(const struct sk_buff *skb) {
-    return (struct dst_entry *) skb->dst;
-}
-
+#define niit_skb_dst skb->dst
+#else
+#define niit_skb_dst skb->_skb_dst
 #endif
 
 struct net_device* tunnel_dev;
@@ -209,8 +207,8 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
         skb->protocol = htons(ETH_P_IPV6);
         skb->pkt_type = PACKET_HOST;
         skb->dev = tunnel_dev;
-        dst_release(skb->dst);
-        skb->dst = NULL;
+        dst_release((struct dst_entry *)niit_skb_dst);
+        niit_skb_dst = 0;
 
         /* install v6 header */
         memset(iph6, 0, sizeof(struct ipv6hdr));
@@ -346,8 +344,8 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
         skb->protocol = htons(ETH_P_IP);
         skb->pkt_type = PACKET_HOST;
         skb->dev = tunnel_dev;
-        dst_release(skb->dst);
-        skb->dst = NULL;
+        dst_release((struct dst_entry *)niit_skb_dst);
+        niit_skb_dst = 0;
 
         /* TODO: set iph4->ttl = hoplimit and recalc the checksum ! */
 
@@ -402,7 +400,7 @@ static void niit_dev_setup(struct net_device *dev) {
     dev->type = ARPHRD_TUNNEL;
     dev->mtu = ETH_DATA_LEN - sizeof(struct ipv6hdr);
     dev->flags = IFF_NOARP;
-    dev->iflink = 1;
+/*    dev->iflink = 1; */
     
     random_ether_addr(dev->dev_addr);
 
