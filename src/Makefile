@@ -2,7 +2,7 @@
 # Makefile for niit.
 #
 
-ifdef OPENWRTVERSION
+ifeq ($(OPENWRT_BUILD),1)
 
 obj-m   := niit.o
 ifeq ($(MAKING_MODULES),1)
