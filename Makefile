@@ -16,7 +16,7 @@ PKG_VERSION:=0.2
 include $(INCLUDE_DIR)/package.mk
 
 define KernelPackage/niit
-  SUBMENU:=Network Devices
+  SUBMENU:=Network Support
   TITLE:=Stateless IP ICMP Translation Algorithm
   DEPENDS:= @LINUX_2_6 +kmod-ipv6
   FILES:=$(PKG_BUILD_DIR)/niit.$(LINUX_KMOD_SUFFIX)
