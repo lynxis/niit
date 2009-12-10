@@ -108,7 +108,7 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
      */
     if (skb->protocol == htons(ETH_P_IP)) {
 
-        PDEBUG("niit skb->proto = iph4 \n");
+        PDEBUG("niit: skb->proto = iph4 \n");
         iph4 = ip_hdr(skb);
 
         s6addr.in6_u.u6_addr32[0] = tunnel->ipv6prefix_1;
@@ -135,7 +135,7 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
         tdev = rt6->u.dst.dev;
 	dst_release(&rt6->u.dst);
         if (tdev == dev) {
-            PDEBUG("niit recursion detected todev = dev \n");
+            PDEBUG("niit: recursion detected todev = dev \n");
             stats->collisions++;
             goto tx_error;
         }
@@ -184,15 +184,15 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
         /* we need some space */
         if (delta < sizeof(struct ipv6hdr)) {
             iph6 = (struct ipv6hdr*) skb_push(skb, sizeof(struct ipv6hdr) - delta);
-            PDEBUG("niit : iph6 < 0 skb->len %x \n", skb->len);
+            PDEBUG("niit: iph6 < 0 skb->len %x \n", skb->len);
         }
         else if (delta > sizeof(struct ipv6hdr)) {
             iph6 = (struct ipv6hdr*) skb_pull(skb, delta - sizeof(struct ipv6hdr));
-            PDEBUG("niit : iph6 > 0 skb->len %x \n", skb->len);
+            PDEBUG("niit: iph6 > 0 skb->len %x \n", skb->len);
         }
         else {
             iph6 = (struct ipv6hdr*) skb->data;
-            PDEBUG("niit : iph6 = 0 skb->len %x \n", skb->len);
+            PDEBUG("niit: iph6 = 0 skb->len %x \n", skb->len);
         }
 
         /* skb->network_header iph6; */
@@ -217,8 +217,6 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
         memcpy(&(iph6->saddr), &s6addr, sizeof(struct in6_addr));
         memcpy(&(iph6->daddr), &d6addr, sizeof(struct in6_addr));
 
-        PDEBUG("niit : before nf_reset skb->len %x \n", skb->len);PDEBUG("niit : before nf_reset mac->len  %x \n", skb->mac_len);PDEBUG("niit : before nf_reset data->len  %x \n", skb->data_len);
-
         nf_reset(skb);
         netif_rx(skb);
         tunnel->recursion--;
@@ -228,11 +226,11 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
         __be32 d4addr;
         __u8 hoplimit;
         struct rtable *rt; /* Route to the other host */
-        PDEBUG("niit skb->proto = iph6 \n");
+        PDEBUG("niit: skb->proto = iph6 \n");
 
         iph6 = ipv6_hdr(skb);
         if (!iph6) {
-            PDEBUG("niit cant find iph6 \n");
+            PDEBUG("niit: cant find iph6 \n");
             goto tx_error;
         }
 
@@ -241,7 +239,7 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
 
         if (iph6->daddr.s6_addr32[0] != tunnel->ipv6prefix_1 || iph6->daddr.s6_addr32[1] != tunnel->ipv6prefix_2
                 || iph6->daddr.s6_addr32[2] != tunnel->ipv6prefix_3) {
-            PDEBUG("niit_xmit ipv6(): Dst addr haven't our previx addr: %x%x%x%x, packet dropped.\n",
+            PDEBUG("niit: xmit ipv6(): Dst addr haven't our previx addr: %x%x%x%x, packet dropped.\n",
                     iph6->daddr.s6_addr32[0], iph6->daddr.s6_addr32[1],
                     iph6->daddr.s6_addr32[2], iph6->daddr.s6_addr32[3]);
             goto tx_error;
@@ -308,8 +306,7 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
          * Okay, now see if we can stuff it in the buffer as-is.
          */
 
-        //        max_headroom = LL_RESERVED_SPACE(tdev)+sizeof(struct iphdr);
-        PDEBUG("niit: eret 1 \n");
+        /*       max_headroom = LL_RESERVED_SPACE(tdev)+sizeof(struct iphdr); */
 
         if (skb_shared(skb) || (skb_cloned(skb) && !skb_clone_writable(skb, 0))) {
             struct sk_buff *new_skb = skb_realloc_headroom(skb, skb_headroom(skb));
@@ -352,15 +349,16 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
         tunnel->recursion--;
     }
     else {
-        PDEBUG("niit unknown direction %x \n", skb->protocol);
+        PDEBUG("niit: unknown direction %x \n", skb->protocol);
         goto tx_error;
         /* drop */
-    }PDEBUG("niit: ret 0 \n");
+    }
     return 0;
 
     tx_error_icmp: dst_link_failure(skb);
     PDEBUG("niit: tx_error_icmp\n");
-    tx_error: PDEBUG("niit: tx_error\n");
+    tx_error:
+    PDEBUG("niit: tx_error\n");
     stats->tx_errors++;
     dev_kfree_skb(skb);
     tunnel->recursion--;
