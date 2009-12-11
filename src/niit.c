@@ -1,8 +1,8 @@
 /*
- * niitv2.c
+ * niit.c
  *
  *  Created on: 11.10.2009
- *      Author: lynxis\
+ *      Author: lynxis
  *  TODO: device Hoplimit is max device ttl ?!
  *  TODO: mtu
  *  TODO: ipv4 route check
@@ -63,12 +63,7 @@ static inline void skb_dst_drop(struct sk_buff *skb) {
        dst_release(skb->dst);
        skb->dst = NULL;
 }
-
 #endif
-
-
-
-struct net_device* tunnel_dev;
 
 struct niit_tunnel {
     __be32 ipv6prefix_1;
@@ -77,17 +72,20 @@ struct niit_tunnel {
     int recursion;
 };
 
+/* tunnel4_dev input ipv4
+   tunnel6_dev input ipv6 */
+struct net_device* tunnel4_dev;
+struct net_device* tunnel6_dev;
+
 static int niit_err(struct sk_buff *skb, u32 info) {
     return 0;
 }
 
 static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
-
-    struct niit_tunnel *tunnel = (struct niit_tunnel *) netdev_priv(tunnel_dev);
-    struct net_device_stats *stats = &tunnel_dev->stats;
+    struct niit_tunnel *tunnel = (struct niit_tunnel *) netdev_priv(tunnel4_dev);
     struct iphdr *iph4;
     struct ipv6hdr *iph6;
-
+    struct net_device_stats *stats;
     struct rt6_info *rt6; /* Route to the other host */
     struct net_device *tdev; /* Device to other host */
     __u8 nexthdr; /* IPv6 next header */
@@ -95,11 +93,11 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
     u32 delta; /* calc space inside skb */
     unsigned int max_headroom; /* The extra header space needed */
     const unsigned char *old_mac;
-    unsigned int mtu = tunnel_dev->mtu;
+    unsigned int mtu = tunnel4_dev->mtu;
+    /* mtu ? */
     int skb_delta;
     struct in6_addr s6addr;
     struct in6_addr d6addr;
-
 
     /*
      * all IPv4 (includes icmp) will be encapsulated.
@@ -107,7 +105,7 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
      *
      */
     if (skb->protocol == htons(ETH_P_IP)) {
-
+        stats = &tunnel4_dev->stats;
         PDEBUG("niit: skb->proto = iph4 \n");
         iph4 = ip_hdr(skb);
 
@@ -127,7 +125,7 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
          d6addr.in6_u.u6_addr32[0], d6addr.in6_u.u6_addr32[1],
          d6addr.in6_u.u6_addr32[2], d6addr.in6_u.u6_addr32[3]);
 
-        if ((rt6 = rt6_lookup(dev_net(tunnel_dev), &d6addr, &s6addr, (tunnel_dev)->iflink, 0)) == NULL) {
+        if ((rt6 = rt6_lookup(dev_net(tunnel4_dev), &d6addr, &s6addr, (tunnel4_dev)->iflink, 0)) == NULL) {
             stats->tx_carrier_errors++;
             goto tx_error_icmp;
         }
@@ -144,7 +142,8 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
 
          if (mtu < IPV6_MIN_MTU)
          mtu = IPV6_MIN_MTU;
-         *//*
+         */
+         /*
          if (skb->len > mtu) {
          PDEBUG("niit: dropped paket\n");
          goto tx_error;
@@ -205,7 +204,7 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
         IPCB(skb)->flags = 0;
         skb->protocol = htons(ETH_P_IPV6);
         skb->pkt_type = PACKET_HOST;
-        skb->dev = tunnel_dev;
+        skb->dev = tunnel4_dev;
         skb_dst_drop(skb);
 
         /* install v6 header */
@@ -226,6 +225,7 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
         __be32 d4addr;
         __u8 hoplimit;
         struct rtable *rt; /* Route to the other host */
+        stats = &tunnel6_dev->stats;
         PDEBUG("niit: skb->proto = iph6 \n");
 
         iph6 = ipv6_hdr(skb);
@@ -338,7 +338,7 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
         IPCB(skb)->flags = 0;
         skb->protocol = htons(ETH_P_IP);
         skb->pkt_type = PACKET_HOST;
-        skb->dev = tunnel_dev;
+        skb->dev = tunnel6_dev;
         skb_dst_drop(skb);
 
         /* TODO: set iph4->ttl = hoplimit and recalc the checksum ! */
@@ -349,6 +349,7 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
         tunnel->recursion--;
     }
     else {
+        stats = &tunnel6_dev->stats;
         PDEBUG("niit: unknown direction %x \n", skb->protocol);
         goto tx_error;
         /* drop */
@@ -404,7 +405,8 @@ static void niit_dev_setup(struct net_device *dev) {
 static void __exit niit_cleanup(void) {
 
     rtnl_lock();
-    unregister_netdevice(tunnel_dev);
+    unregister_netdevice(tunnel4_dev);
+    unregister_netdevice(tunnel6_dev);
     rtnl_unlock();
 
 }
@@ -415,19 +417,23 @@ static int __init niit_init(void) {
     printk(KERN_INFO "network IPv6 over IPv4 tunneling driver\n");
 
     err = -ENOMEM;
-    tunnel_dev = alloc_netdev(sizeof(struct niit_tunnel), "niit0",
+    tunnel4_dev = alloc_netdev(sizeof(struct niit_tunnel), "niit46",
             niit_dev_setup);
-    if (!tunnel_dev) {
+    tunnel6_dev = alloc_netdev(0, "niit64",
+            niit_dev_setup);
+    if (!tunnel4_dev || !tunnel6_dev) {
         err = -ENOMEM;
         goto err_alloc_dev;
     }
-    tunnel = (struct niit_tunnel *) netdev_priv(tunnel_dev);
+    tunnel = (struct niit_tunnel *) netdev_priv(tunnel4_dev);
 
-    if ((err = register_netdev(tunnel_dev)))
+    if ((err = register_netdev(tunnel4_dev)) ||
+        (err = register_netdev(tunnel6_dev)))
         goto err_reg_dev;
 
 #ifndef HAVE_NET_DEVICE_OPS
-    niit_regxmit(tunnel_dev);
+    niit_regxmit(tunnel4_dev);
+    niit_regxmit(tunnel6_dev);
 #endif
 
     tunnel->ipv6prefix_1 = htonl(NIIT_V6PREFIX_1);
@@ -437,8 +443,10 @@ static int __init niit_init(void) {
     return 0;
 
 err_reg_dev:
-    dev_put(tunnel_dev);
-    free_netdev(tunnel_dev);
+    dev_put(tunnel4_dev);
+    dev_put(tunnel6_dev);
+    free_netdev(tunnel4_dev);
+    free_netdev(tunnel6_dev);
 err_alloc_dev:
     return err;
 
