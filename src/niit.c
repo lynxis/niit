@@ -365,13 +365,6 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
     return 0;
 }
 
-static int niit_tunnel_change_mtu(struct net_device *dev, int new_mtu) {
-    if (new_mtu < IPV6_MIN_MTU || new_mtu > 0xFFF8 - sizeof(struct iphdr))
-        return -EINVAL;
-    dev->mtu = new_mtu;
-    return 0;
-}
-
 #ifdef HAVE_NET_DEVICE_OPS
 static const struct net_device_ops niit_netdev_ops = {
         .ndo_start_xmit = niit_xmit,
