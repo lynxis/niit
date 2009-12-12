@@ -4,7 +4,6 @@
  *  Created on: 11.10.2009
  *      Author: lynxis
  *  TODO: device Hoplimit is max device ttl ?!
- *  TODO: mtu
  *  TODO: ipv4 route check
  */
 
