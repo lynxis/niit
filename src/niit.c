@@ -417,9 +417,9 @@ static int __init niit_init(void) {
     printk(KERN_INFO "network IPv6 over IPv4 tunneling driver\n");
 
     err = -ENOMEM;
-    tunnel4_dev = alloc_netdev(sizeof(struct niit_tunnel), "niit46",
+    tunnel4_dev = alloc_netdev(sizeof(struct niit_tunnel), "niit4to6",
             niit_dev_setup);
-    tunnel6_dev = alloc_netdev(0, "niit64",
+    tunnel6_dev = alloc_netdev(0, "niit6to4",
             niit_dev_setup);
     if (!tunnel4_dev || !tunnel6_dev) {
         err = -ENOMEM;
