@@ -88,13 +88,8 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
     struct rt6_info *rt6; /* Route to the other host */
     struct net_device *tdev; /* Device to other host */
     __u8 nexthdr; /* IPv6 next header */
-    unsigned int len; /* skb len */
     u32 delta; /* calc space inside skb */
     unsigned int max_headroom; /* The extra header space needed */
-    const unsigned char *old_mac;
-    unsigned int mtu = tunnel4_dev->mtu;
-    /* mtu ? */
-    int skb_delta;
     struct in6_addr s6addr;
     struct in6_addr d6addr;
 
@@ -223,7 +218,6 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
         __be32 s4addr;
         __be32 d4addr;
         __u8 hoplimit;
-        struct rtable *rt; /* Route to the other host */
         stats = &tunnel6_dev->stats;
         PDEBUG("niit: skb->proto = iph6 \n");
 
