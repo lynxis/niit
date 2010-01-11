@@ -250,6 +250,10 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
 
 		 }
 		 */
+		if(nexthdr != IPPROTO_IPIP) {
+			PDEBUG("niit: cant handle hdrtype : %x.\n", nexthdr);
+			goto tx_error;
+		}
 
 		iph4 = ipip_hdr(skb);
 
