@@ -15,7 +15,6 @@
 #include <linux/if_arp.h>
 #include <linux/if_ether.h>
 #include <linux/if.h>
-#include <linux/if.h>
 #include <linux/in6.h>
 #include <linux/init.h>
 #include <linux/module.h>
@@ -29,13 +28,10 @@
 #include <linux/version.h>
 #include <net/addrconf.h>
 #include <net/dsfield.h>
-#include <net/dsfield.h>
 #include <net/dst.h>
 #include <net/icmp.h>
 #include <net/inet_ecn.h>
 #include <net/ip6_fib.h>
-#include <net/ip6_fib.h>
-#include <net/ip6_route.h>
 #include <net/ip6_route.h>
 #include <net/ip6_tunnel.h>
 #include <net/ip.h>
