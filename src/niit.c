@@ -126,7 +126,7 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
         }
 
         tdev = rt6->u.dst.dev;
-	dst_release(&rt6->u.dst);
+        dst_release(&rt6->u.dst);
         if (tdev == dev) {
             PDEBUG("niit: recursion detected todev = dev \n");
             stats->collisions++;
@@ -260,7 +260,7 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
         iph4 = ipip_hdr(skb);
 
         /* check for a valid route */
-        /*	{
+        /*       {
          struct flowi fl = { .nl_u = { .ip4_u =
          { .daddr = d4addr,
          .saddr = s4addr,
