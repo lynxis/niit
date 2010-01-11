@@ -412,10 +412,13 @@ static int __init niit_init(void) {
         goto err_alloc_dev;
     }
     tunnel = (struct niit_tunnel *) netdev_priv(tunnel4_dev);
-
+    
     if ((err = register_netdev(tunnel4_dev)) ||
         (err = register_netdev(tunnel6_dev)))
         goto err_reg_dev;
+
+    tunnel4_dev->mtu = 1400;
+    tunnel6_dev->mtu = 1500;
 
 #ifndef HAVE_NET_DEVICE_OPS
     niit_regxmit(tunnel4_dev);
