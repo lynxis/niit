@@ -82,6 +82,7 @@ static int niit_err(struct sk_buff *skb, u32 info) {
 
 static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
     struct niit_tunnel *tunnel = (struct niit_tunnel *) netdev_priv(tunnel4_dev);
+    struct ethhdr *ethhead;
     struct iphdr *iph4;
     struct ipv6hdr *iph6;
     struct net_device_stats *stats;
@@ -193,6 +194,14 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
         skb->transport_header = skb->network_header; /* we say skb->transport_header = iph4; */
         skb_reset_network_header(skb); /* now -> we reset the network header to skb->data which is our ipv6 paket */
         skb_reset_mac_header(skb);
+        skb->mac_header = skb->network_header - sizeof(struct ethhdr);
+        skb->mac_len = sizeof(struct ethhdr);
+
+        /* add a dummy ethhdr to use a correct interface linktype */
+        ethhead = eth_hdr(skb);
+        memcpy(ethhead->h_dest, tunnel4_dev->dev_addr, ETH_ALEN);
+        memcpy(ethhead->h_source, tunnel4_dev->dev_addr, ETH_ALEN);
+        ethhead->h_proto = htons(ETH_P_IP);
 
         /* prepare to send it again */
         IPCB(skb)->flags = 0;
@@ -325,7 +334,14 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
         /* skb->transport_header iph4; */
         skb->network_header = skb->transport_header; /* we say skb->network_header = iph4; */
         skb_set_transport_header(skb, sizeof(struct iphdr));
-        skb_reset_mac_header(skb);
+        skb->mac_header = skb->network_header - sizeof(struct ethhdr);
+        skb->mac_len = sizeof(struct ethhdr);
+
+        /* add a dummy ethhdr to use a correct interface linktype */
+        ethhead = eth_hdr(skb);
+        memcpy(ethhead->h_dest, tunnel6_dev->dev_addr, ETH_ALEN);
+        memcpy(ethhead->h_source, tunnel6_dev->dev_addr, ETH_ALEN);
+        ethhead->h_proto = htons(ETH_P_IP);
 
         /* prepare to send it again */
         IPCB(skb)->flags = 0;
@@ -379,7 +395,7 @@ static void niit_dev_setup(struct net_device *dev) {
     dev->netdev_ops = &niit_netdev_ops;
 #endif
     dev->destructor = free_netdev;
-    dev->type = ARPHRD_TUNNEL;
+    dev->type = ARPHRD_ETHER;
     dev->mtu = ETH_DATA_LEN - sizeof(struct ipv6hdr);
     dev->flags = IFF_NOARP;
 /*    dev->iflink = 1; */
