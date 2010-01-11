@@ -191,11 +191,11 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
 		skb->mac_header = skb->network_header - sizeof(struct ethhdr);
 		skb->mac_len = sizeof(struct ethhdr);
 
-		/* add a dummy ethhdr to use a correct interface linktype */
+		/* add a dummy ethhdr to use correct interface linktype */
 		ethhead = eth_hdr(skb);
 		memcpy(ethhead->h_dest, tunnel4_dev->dev_addr, ETH_ALEN);
 		memcpy(ethhead->h_source, tunnel4_dev->dev_addr, ETH_ALEN);
-		ethhead->h_proto = htons(ETH_P_IP);
+		ethhead->h_proto = htons(ETH_P_IPV6);
 
 		/* prepare to send it again */
 		IPCB(skb)->flags = 0;
@@ -331,7 +331,7 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
 		skb->mac_header = skb->network_header - sizeof(struct ethhdr);
 		skb->mac_len = sizeof(struct ethhdr);
 
-		/* add a dummy ethhdr to use a correct interface linktype */
+		/* add a dummy ethhdr to use correct interface linktype */
 		ethhead = eth_hdr(skb);
 		memcpy(ethhead->h_dest, tunnel6_dev->dev_addr, ETH_ALEN);
 		memcpy(ethhead->h_source, tunnel6_dev->dev_addr, ETH_ALEN);
