@@ -126,29 +126,10 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
 			stats->collisions++;
 			goto tx_error;
 		}
-		/*
-		 mtu = skb_dst(skb) ? dst_mtu(skb_dst(skb)) : dev->mtu;
+		/* old MTU check */
 
-		 if (mtu < IPV6_MIN_MTU)
-		 mtu = IPV6_MIN_MTU;
-		 */
-		 /*
-		 if (skb->len > mtu) {
-		 PDEBUG("niit: dropped paket\n");
-		 goto tx_error;
-		 } */
 		/*
-		 if (tunnel->err_count > 0) {
-		 if (time_before(jiffies,
-		 tunnel->err_time + IPTUNNEL_ERR_TIMEO)) {
-		 tunnel->err_count--;
-		 dst_link_failure(skb);
-		 } else
-		 tunnel->err_count = 0;
-		 }
-		 */
-		/*
-		 * Okay, now see if we can stuff it in the buffer as-is.
+		 * Resize the buffer to push our ipv6 head into
 		 */
 		max_headroom = LL_RESERVED_SPACE(tdev) + sizeof(struct ipv6hdr);
 
@@ -169,7 +150,7 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
 
 		delta = skb_network_header(skb) - skb->data;
 
-		/* we need some space */
+		/* make our skb space best fit */
 		if (delta < sizeof(struct ipv6hdr)) {
 			iph6 = (struct ipv6hdr*) skb_push(skb, sizeof(struct ipv6hdr) - delta);
 			PDEBUG("niit: iph6 < 0 skb->len %x \n", skb->len);
@@ -182,9 +163,10 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
 			iph6 = (struct ipv6hdr*) skb->data;
 			PDEBUG("niit: iph6 = 0 skb->len %x \n", skb->len);
 		}
-
-		/* skb->network_header iph6; */
-		/* skb->transport_header iph4; */
+		/* how the package should look like :
+		 * skb->network_header =  iph6
+		 * skb->transport_header = iph4; 
+                 */
 		skb->transport_header = skb->network_header; /* we say skb->transport_header = iph4; */
 		skb_reset_network_header(skb); /* now -> we reset the network header to skb->data which is our ipv6 paket */
 		skb_reset_mac_header(skb);
@@ -218,6 +200,7 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
 		tunnel->recursion--;
 	}
 	else if (skb->protocol == htons(ETH_P_IPV6)) {
+		/* got a ipv6-package and need to translate it back to ipv4 */
 		__be32 s4addr;
 		__be32 d4addr;
 		__u8 hoplimit;
@@ -232,7 +215,7 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
 
 		/* IPv6 to IPv4 */
 		hoplimit = iph6->hop_limit;
-
+		/* check against our prefix which all packages must have */
 		if (iph6->daddr.s6_addr32[0] != tunnel->ipv6prefix_1 || iph6->daddr.s6_addr32[1] != tunnel->ipv6prefix_2
 				|| iph6->daddr.s6_addr32[2] != tunnel->ipv6prefix_3) {
 			PDEBUG("niit: xmit ipv6(): Dst addr haven't our previx addr: %x%x%x%x, packet dropped.\n",
@@ -244,7 +227,7 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
 		s4addr = iph6->saddr.s6_addr32[3];
 		d4addr = iph6->daddr.s6_addr32[3];
 		nexthdr = iph6->nexthdr;
-		/* TODO nexthdr */
+		/* TODO nexthdr handle */
 		/*
 		 while(nexthdr != IPPROTO_IPIP) {
 
@@ -257,7 +240,7 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
 
 		iph4 = ipip_hdr(skb);
 
-		/* check for a valid route */
+		/* TODO: fix the check for a valid route */
 		/*	   {
 		 struct flowi fl = { .nl_u = { .ip4_u =
 		 { .daddr = d4addr,
@@ -303,10 +286,8 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
 		 */
 
 		/*
-		 * Okay, now see if we can stuff it in the buffer as-is.
+		 *  check if we can reuse our skb_buff
 		 */
-
-		/*	   max_headroom = LL_RESERVED_SPACE(tdev)+sizeof(struct iphdr); */
 
 		if (skb_shared(skb) || (skb_cloned(skb) && !skb_clone_writable(skb, 0))) {
 			struct sk_buff *new_skb = skb_realloc_headroom(skb, skb_headroom(skb));
@@ -363,9 +344,10 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
 	}
 	return 0;
 
-	tx_error_icmp: dst_link_failure(skb);
+  tx_error_icmp: 
+	dst_link_failure(skb);
 	PDEBUG("niit: tx_error_icmp\n");
-	tx_error:
+  tx_error:
 	PDEBUG("niit: tx_error\n");
 	stats->tx_errors++;
 	dev_kfree_skb(skb);
@@ -384,9 +366,7 @@ static void niit_regxmit(struct net_device *dev) {
 #endif
 
 static void niit_dev_setup(struct net_device *dev) {
-
 	ether_setup(dev);
-
 	memset(netdev_priv(dev), 0, sizeof(struct niit_tunnel));
 
 #ifdef HAVE_NET_DEVICE_OPS
@@ -396,10 +376,7 @@ static void niit_dev_setup(struct net_device *dev) {
 	dev->type = ARPHRD_ETHER;
 	dev->mtu = ETH_DATA_LEN - sizeof(struct ipv6hdr);
 	dev->flags = IFF_NOARP;
-/*	dev->iflink = 1; */
-
 	random_ether_addr(dev->dev_addr);
-
 }
 
 static void __exit niit_cleanup(void) {
