@@ -7,44 +7,11 @@
  *  TODO: ipv4 route check
  */
 
-#include <asm/uaccess.h>
-#include <linux/capability.h>
-#include <linux/errno.h>
 #include <linux/etherdevice.h>
-#include <linux/icmp.h>
 #include <linux/if_arp.h>
-#include <linux/if_ether.h>
-#include <linux/if.h>
-#include <linux/in6.h>
-#include <linux/init.h>
 #include <linux/module.h>
-#include <linux/netdevice.h>
-#include <linux/netfilter_ipv4.h>
-#include <linux/net.h>
-#include <linux/skbuff.h>
-#include <linux/socket.h>
-#include <linux/sockios.h>
-#include <linux/types.h>
 #include <linux/version.h>
-#include <net/addrconf.h>
-#include <net/dsfield.h>
-#include <net/dst.h>
-#include <net/icmp.h>
-#include <net/inet_ecn.h>
-#include <net/ip6_fib.h>
 #include <net/ip6_route.h>
-#include <net/ip6_tunnel.h>
-#include <net/ip.h>
-#include <net/ipip.h>
-#include <net/ipv6.h>
-#include <net/ndisc.h>
-#include <net/net_namespace.h>
-#include <net/netns/generic.h>
-#include <net/protocol.h>
-#include <net/snmp.h>
-#include <net/sock.h>
-#include <net/transp_v6.h>
-#include <net/udp.h>
 #include <net/xfrm.h>
 
 #include "niit.h"
