@@ -16,8 +16,6 @@
 
 #include "niit.h"
 
-#define static
-
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31)
 static inline void skb_dst_drop(struct sk_buff *skb) {
 	   dst_release(skb->dst);
@@ -322,23 +320,15 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
 	return 0;
 }
 
-#ifdef HAVE_NET_DEVICE_OPS
 static const struct net_device_ops niit_netdev_ops = {
 		.ndo_start_xmit = niit_xmit,
 };
-#else
-static void niit_regxmit(struct net_device *dev) {
-	dev->hard_start_xmit = niit_xmit;
-}
-#endif
 
 static void niit_dev_setup(struct net_device *dev) {
 	ether_setup(dev);
 	memset(netdev_priv(dev), 0, sizeof(struct niit_tunnel));
 
-#ifdef HAVE_NET_DEVICE_OPS
 	dev->netdev_ops = &niit_netdev_ops;
-#endif
 	dev->destructor = free_netdev;
 	dev->type = ARPHRD_ETHER;
 	dev->mtu = ETH_DATA_LEN - sizeof(struct ipv6hdr);
@@ -377,11 +367,6 @@ static int __init niit_init(void) {
 
 	tunnel4_dev->mtu = 1400;
 	tunnel6_dev->mtu = 1500;
-
-#ifndef HAVE_NET_DEVICE_OPS
-	niit_regxmit(tunnel4_dev);
-	niit_regxmit(tunnel6_dev);
-#endif
 
 	tunnel->ipv6prefix_1 = htonl(NIIT_V6PREFIX_1);
 	tunnel->ipv6prefix_2 = htonl(NIIT_V6PREFIX_2);
