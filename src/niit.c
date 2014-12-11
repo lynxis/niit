@@ -84,8 +84,8 @@ static int niit_xmit(struct sk_buff *skb, struct net_device *dev) {
 			goto tx_error_icmp;
 		}
 
-		tdev = rt6->u.dst.dev;
-		dst_release(&rt6->u.dst);
+		tdev = rt6->dst.dev;
+		dst_release(&rt6->dst);
 		if (tdev == dev) {
 			PDEBUG("niit: recursion detected todev = dev \n");
 			stats->collisions++;
